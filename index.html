@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>三同藥品查詢</title>
+<style>
+:root{
+  --bg:#f5f6f4; --panel:#ffffff; --ink:#1d2423; --muted:#68726f; --line:#dfe4e1;
+  --accent:#0f6b63; --accent-ink:#ffffff; --good:#d7efdf; --good-ink:#124a2a;
+  --query:#e6f0fb; --warn:#fff3d6; --warn-ink:#6a4a00; --err:#fde4e1; --err-ink:#7a1f16;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#141817; --panel:#1c2220; --ink:#e7ece9; --muted:#9aa6a2; --line:#2e3834;
+    --accent:#4fb8ac; --accent-ink:#0b1a18; --good:#1d4a30; --good-ink:#c9f0d8;
+    --query:#1d3550; --warn:#4a3b12; --warn-ink:#ffe3a3; --err:#4d221d; --err-ink:#ffd2cc;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.5 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:16px}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;margin-bottom:12px}
+h1{font-size:20px;margin:0;font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:6px 8px;color:var(--muted);font-size:13px}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:2px 10px}
+.chip.bad{background:var(--err);color:var(--err-ink);border-color:transparent}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.search{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.search input[type=search]{flex:1 1 320px;font:inherit;font-size:17px;padding:10px 14px;border:1px solid var(--line);
+  border-radius:8px;background:var(--bg);color:var(--ink);min-width:0}
+.search input[type=search]:focus{outline:2px solid var(--accent);outline-offset:1px}
+.hint{color:var(--muted);font-size:13px;margin-top:8px}
+ul.results{list-style:none;margin:10px 0 0;padding:0;max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+ul.results li{padding:8px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+ul.results li:last-child{border-bottom:0}
+ul.results li:hover,ul.results li.sel{background:var(--query)}
+.r-name{font-weight:600}
+.r-sub{color:var(--muted);font-size:13px}
+h2{font-size:16px;margin:0 0 8px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 8px}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap;background:var(--panel);position:sticky;top:0}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.query td{background:var(--query)}
+.muted{color:var(--muted);font-size:12px}
+.nm b{font-weight:600}
+.nm .en{display:block;color:var(--muted);font-size:12px}
+.badge{display:inline-block;font-size:11px;border-radius:999px;padding:0 7px;
+  background:var(--accent);color:var(--accent-ink);vertical-align:1px}
+.diffnote{display:inline-block;font-size:12px;background:var(--warn);color:var(--warn-ink);border-radius:6px;padding:1px 8px;margin:1px 0}
+td.note>div{margin:1px 0}
+td.note{min-width:180px}
+.grp{font-size:12px;color:var(--muted);word-break:break-all}
+.errbox{background:var(--err);color:var(--err-ink);padding:10px 12px;border-radius:8px;font-size:14px}
+footer{margin-top:20px;color:var(--muted);font-size:12px;line-height:1.6}
+@media (max-width:760px){
+  .wrap{padding:12px}
+  table{min-width:0}
+  thead{display:none}
+  table,tbody,tr,td{display:block;width:100%}
+  tr{border:1px solid var(--line);border-radius:8px;margin-bottom:10px;overflow:hidden}
+  td{display:grid;grid-template-columns:92px 1fr;gap:8px;border-bottom:1px solid var(--line);padding:6px 10px;text-align:left!important}
+  td::before{content:attr(data-l);color:var(--muted);font-size:12px}
+  td:last-child{border-bottom:0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>三同藥品查詢</h1>
+    <div class="chips" id="chips"></div>
+  </header>
+
+  <section class="panel">
+    <div class="search">
+      <input type="search" id="q" placeholder="輸入藥品名稱（中文、英文、成分）或健保碼" autocomplete="off" autofocus>
+    </div>
+    <div class="hint" id="searchHint">資料載入中...</div>
+    <ul class="results" id="results" hidden></ul>
+  </section>
+
+  <section id="detail"></section>
+
+  <p class="muted">三同的定義：分類分組名稱與劑型相同，其中錠劑、膜衣錠、糖衣錠視為同一種劑型，各種持續（緩釋）釋放錠、持續釋放膠囊的不同寫法也各視為同一種。健保價或劑型寫法不同的品項也會列出，並在備註註明。只列出目前仍有效且支付價大於 0 的健保碼。</p>
+
+  <footer>資料來源：衛福部中央健保署健保藥品檔（政府資料開放）。本頁每月自動更新，資料僅供參考，不作為實際給付或調劑之依據，請以健保署公告及藥品說明書為準。</footer>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nf = n => Number(n).toLocaleString("en-US");
+function fmtPrice(p){ return Number(p).toFixed(2); }
+const norm = s => String(s||"").normalize("NFKC").toLowerCase();
+
+function taiwanTodayRoc(){
+  const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" });
+  const [y, m, d] = fmt.format(new Date()).split("-").map(Number);
+  return (y - 1911) * 10000 + m * 100 + d;
+}
+
+/* 劑型歸類：同一類別內的劑型視為相同劑型；未列出的劑型只與自己相同者比對。 */
+const FORM_CLASS = {
+  "錠劑": "一般錠", "膜衣錠": "一般錠", "糖衣錠": "一般錠",
+  "持續性藥效錠": "持續釋放錠", "持續性藥效膜衣錠": "持續釋放錠", "持續性膜衣錠": "持續釋放錠",
+  "持續性釋放錠": "持續釋放錠", "持續釋放膜衣錠": "持續釋放錠", "持續性釋放膜衣錠": "持續釋放錠",
+  "持續性糖衣錠": "持續釋放錠", "緩釋錠": "持續釋放錠", "緩釋膜衣錠": "持續釋放錠",
+  "長效錠": "持續釋放錠", "長效膜衣錠": "持續釋放錠",
+  "持續性藥效膠囊劑": "持續釋放膠囊", "持續性釋放膠囊": "持續釋放膠囊",
+  "緩釋膠囊": "持續釋放膠囊", "緩釋微粒膠囊": "持續釋放膠囊"
+};
+const formClass = f => FORM_CLASS[f] || f;
+
+const S = { drugs: [], byCode: new Map(), groups: new Map(), generated: "", total: 0, cur: null };
+
+function buildIndex(data){
+  const today = taiwanTodayRoc();
+  const pick = new Map();
+  for (const r of data.rows){
+    if (r[7] <= today && today <= r[8]){
+      const o = pick.get(r[0]);
+      if (!o || r[7] >= o[7]) pick.set(r[0], r);
+    }
+  }
+  for (const r of pick.values()){
+    const d = { c:r[0], en:r[1], zh:r[2], ing:r[3], form:r[4], grp:r[5], price:r[6] };
+    d.h = norm(`${d.c} ${d.zh} ${d.en} ${d.ing}`);
+    d.gk = d.grp ? `${d.grp}\u0001${formClass(d.form)}` : "";
+    S.drugs.push(d); S.byCode.set(d.c, d);
+    if (d.gk){ let a = S.groups.get(d.gk); if (!a) S.groups.set(d.gk, a = []); a.push(d); }
+  }
+  S.generated = data.generated || "";
+  S.total = data.count || S.drugs.length;
+}
+
+function renderChips(){
+  $("#chips").innerHTML =
+    `<span class="chip">健保藥品檔：${nf(S.drugs.length)} 個目前有效藥品</span>` +
+    `<span class="chip">資料更新：${esc(S.generated)}</span>`;
+}
+
+let hits = [], selIdx = -1;
+function search(){
+  const raw = $("#q").value.trim();
+  const box = $("#results"), hint = $("#searchHint");
+  selIdx = -1;
+  if (!raw){ box.hidden = true; hits = []; hint.textContent = `可查詢 ${nf(S.drugs.length)} 個目前有效的健保藥品。`; return; }
+  const toks = norm(raw).split(/\s+/).filter(Boolean);
+  const code = raw.toUpperCase();
+  hits = S.drugs.filter(d => toks.every(t => d.h.includes(t)));
+  hits.sort((a, b) => {
+    const ea = a.c === code ? 0 : 1, eb = b.c === code ? 0 : 1;
+    if (ea !== eb) return ea - eb;
+    return (a.en || a.zh).localeCompare(b.en || b.zh, "zh-Hant");
+  });
+  const shown = hits.slice(0, 100);
+  hint.textContent = hits.length ? `找到 ${nf(hits.length)} 個藥品${hits.length > 100 ? "，只列出前 100 個，請輸入更多關鍵字" : ""}。` :
+    "找不到符合的有效藥品。如果是已停止給付的舊碼，這裡不會列出。";
+  box.innerHTML = shown.map((d, i) =>
+    `<li data-c="${esc(d.c)}" data-i="${i}"><span class="r-name">${esc(d.en || d.zh)}</span><br>
+     <span class="r-sub">${esc(d.c)} ・ ${esc(d.zh)} ・ ${esc(d.form)} ・ 支付價 ${fmtPrice(d.price)}</span></li>`
+  ).join("");
+  box.hidden = !shown.length;
+}
+function pick(code){
+  location.hash = code;
+  $("#results").hidden = true;
+}
+
+function lookupRows(code){
+  const d = S.byCode.get(code);
+  if (!d) return null;
+  const members = d.gk ? S.groups.get(d.gk) : null;
+  const rows = (members || []).map(m => ({ d: m, diff: Math.abs(m.price - d.price) > 0.0001, fdiff: m.form !== d.form }));
+  rows.sort((x, y) => (x.d.en || x.d.zh).localeCompare(y.d.en || y.d.zh, "zh-Hant"));
+  return { q: d, rows, matchable: !!d.gk };
+}
+function nameCell(d){
+  const main = d.en || d.zh, other = d.en ? d.zh : "";
+  return `<b>${esc(main)}</b>${other ? `<span class="en">${esc(other)}</span>` : ""}`;
+}
+const THEAD_Q = `<thead><tr><th>健保碼</th><th>藥品名稱</th><th>支付價</th><th>劑型</th><th>成分</th><th>分類分組名稱</th></tr></thead>`;
+const THEAD_S = `<thead><tr><th>健保碼</th><th>藥品名稱</th><th>支付價</th><th>劑型</th><th>備註</th></tr></thead>`;
+function queryRowHtml(d){
+  return `<tr class="query"><td data-l="健保碼">${esc(d.c)}</td>
+    <td data-l="藥品名稱" class="nm">${nameCell(d)}</td>
+    <td data-l="支付價" class="num">${fmtPrice(d.price)}</td>
+    <td data-l="劑型">${esc(d.form)}</td>
+    <td data-l="成分">${esc(d.ing)}</td>
+    <td data-l="分類分組名稱" class="grp">${esc(d.grp)}</td></tr>`;
+}
+function subRowHtml(r, qPrice, qForm, isQuery){
+  const d = r.d;
+  const note = [];
+  if (isQuery) note.push('<span class="badge">查詢藥品</span>');
+  if (r.fdiff) note.push(`<span class="diffnote">劑型不同：${esc(d.form)}（查詢藥品 ${esc(qForm)}）</span>`);
+  if (r.diff) note.push(`<span class="diffnote">健保價不同：${fmtPrice(d.price)}（查詢藥品 ${fmtPrice(qPrice)}）</span>`);
+  return `<tr class="${isQuery ? "query" : ""}"><td data-l="健保碼">${esc(d.c)}</td>
+    <td data-l="藥品名稱" class="nm">${nameCell(d)}</td>
+    <td data-l="支付價" class="num">${fmtPrice(d.price)}</td>
+    <td data-l="劑型">${esc(d.form)}</td>
+    <td data-l="備註" class="note">${note.map(x => `<div>${x}</div>`).join("") || "-"}</td></tr>`;
+}
+function showDetail(code){
+  const box = $("#detail");
+  S.cur = code || null;
+  if (!code){ box.innerHTML = ""; return; }
+  const cu = code.toUpperCase();
+  const res = lookupRows(cu);
+  if (!res){ box.innerHTML = `<div class="panel">找不到健保碼 ${esc(code)}。它可能已停止給付或不在目前的健保藥品檔中。</div>`; return; }
+  let html = `<div class="panel"><h2>查詢藥品</h2><div class="tablewrap"><table>${THEAD_Q}<tbody>${queryRowHtml(res.q)}</tbody></table></div></div>`;
+  if (!res.matchable){
+    html += `<div class="panel"><h2>可取代的三同藥品</h2><p class="sub">這個藥品沒有分類分組名稱，無法比對三同。</p></div>`;
+  } else {
+    const nd = res.rows.filter(r => r.diff).length, nfm = res.rows.filter(r => r.fdiff).length;
+    html += `<div class="panel"><h2>可取代的三同藥品</h2>
+      <p class="sub">同分類分組名稱、同劑型共 ${res.rows.length} 個健保碼（含查詢藥品本身）${nd ? `，${nd} 個的健保價與查詢藥品不同` : ""}${nfm ? `，${nfm} 個的劑型寫法不同（寫法不同但視為同類，例如錠劑與膜衣錠）` : ""}（均已在備註註明）。依英文名稱排序，無英文名稱者依中文名稱排序。</p>
+      <div class="tablewrap"><table>${THEAD_S}<tbody>${
+        res.rows.map(r => subRowHtml(r, res.q.price, res.q.form, r.d.c === cu)).join("")
+      }</tbody></table></div></div>`;
+    if (res.rows.length === 1) html += `<p class="muted">這個藥品目前沒有其他三同替代品。</p>`;
+  }
+  box.innerHTML = html;
+}
+
+function renderAll(){
+  renderChips(); search();
+  if (S.cur) showDetail(S.cur);
+  else if (location.hash.length > 1) showDetail(decodeURIComponent(location.hash.slice(1)));
+}
+
+$("#q").addEventListener("input", () => { search(); });
+$("#q").addEventListener("keydown", e => {
+  const items = [...document.querySelectorAll("#results li")];
+  if (e.key === "ArrowDown" || e.key === "ArrowUp"){
+    if (!items.length) return; e.preventDefault();
+    selIdx = (selIdx + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+    items.forEach((li, i) => li.classList.toggle("sel", i === selIdx));
+    items[selIdx].scrollIntoView({ block: "nearest" });
+  } else if (e.key === "Enter"){
+    e.preventDefault();
+    if (selIdx >= 0 && items[selIdx]) pick(items[selIdx].dataset.c);
+    else if (hits.length) pick(hits[0].c);
+  } else if (e.key === "Escape"){
+    $("#results").hidden = true;
+  }
+});
+$("#results").addEventListener("click", e => { const li = e.target.closest("li"); if (li) pick(li.dataset.c); });
+$("#q").addEventListener("focus", () => { if (hits.length) $("#results").hidden = false; });
+window.addEventListener("hashchange", () => showDetail(decodeURIComponent(location.hash.slice(1))));
+
+fetch("data/nhi.json", { cache: "no-store" })
+  .then(resp => { if (!resp.ok) throw new Error("資料下載失敗（HTTP " + resp.status + "）"); return resp.json(); })
+  .then(data => {
+    if (!data || !Array.isArray(data.rows)) throw new Error("資料格式不正確");
+    buildIndex(data);
+    renderAll();
+  })
+  .catch(err => {
+    $("#chips").innerHTML = `<span class="chip bad">資料載入失敗</span>`;
+    $("#detail").innerHTML = `<div class="errbox">資料載入失敗，請稍後重新整理頁面再試一次。（${esc(err.message)}）</div>`;
+    $("#searchHint").textContent = "";
+  });
+</script>
+</body>
+</html>
