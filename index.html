@@ -38,6 +38,7 @@ ul.results li{padding:8px 12px;border-bottom:1px solid var(--line);cursor:pointe
 ul.results li:last-child{border-bottom:0}
 ul.results li:hover,ul.results li.sel{background:var(--query)}
 .r-name{font-weight:600}
+.r-spec{font-weight:400;color:var(--muted);font-size:13px}
 .r-sub{color:var(--muted);font-size:13px}
 h2{font-size:16px;margin:0 0 8px}
 .sub{color:var(--muted);font-size:13px;margin:0 0 8px}
@@ -130,7 +131,8 @@ function buildIndex(data){
     }
   }
   for (const r of pick.values()){
-    const d = { c:r[0], en:r[1], zh:r[2], ing:r[3], form:r[4], grp:r[5], price:r[6] };
+    const d = { c:r[0], en:r[1], zh:r[2], ing:r[3], form:r[4], grp:r[5], price:r[6], specQty:r[9]||"", specUnit:r[10]||"" };
+    d.spec = d.specQty ? `${d.specQty}${d.specUnit}` : "";
     d.h = norm(`${d.c} ${d.zh} ${d.en} ${d.ing}`);
     d.gk = d.grp ? `${d.grp}\u0001${formClass(d.form)}` : "";
     S.drugs.push(d); S.byCode.set(d.c, d);
@@ -164,7 +166,7 @@ function search(){
   hint.textContent = hits.length ? `找到 ${nf(hits.length)} 個藥品${hits.length > 100 ? "，只列出前 100 個，請輸入更多關鍵字" : ""}。` :
     "找不到符合的有效藥品。如果是已停止給付的舊碼，這裡不會列出。";
   box.innerHTML = shown.map((d, i) =>
-    `<li data-c="${esc(d.c)}" data-i="${i}"><span class="r-name">${esc(d.en || d.zh)}</span><br>
+    `<li data-c="${esc(d.c)}" data-i="${i}"><span class="r-name">${esc(d.en || d.zh)}${d.spec ? ` <span class="r-spec">${esc(d.spec)}</span>` : ""}</span><br>
      <span class="r-sub">${esc(d.c)} ・ ${esc(d.zh)} ・ ${esc(d.form)} ・ 支付價 ${fmtPrice(d.price)}</span></li>`
   ).join("");
   box.hidden = !shown.length;
@@ -186,11 +188,12 @@ function nameCell(d){
   const main = d.en || d.zh, other = d.en ? d.zh : "";
   return `<b>${esc(main)}</b>${other ? `<span class="en">${esc(other)}</span>` : ""}`;
 }
-const THEAD_Q = `<thead><tr><th>健保碼</th><th>藥品名稱</th><th>支付價</th><th>劑型</th><th>成分</th><th>分類分組名稱</th></tr></thead>`;
-const THEAD_S = `<thead><tr><th>健保碼</th><th>藥品名稱</th><th>支付價</th><th>劑型</th><th>備註</th></tr></thead>`;
+const THEAD_Q = `<thead><tr><th>健保碼</th><th>藥品名稱</th><th>規格量</th><th>支付價</th><th>劑型</th><th>成分</th><th>分類分組名稱</th></tr></thead>`;
+const THEAD_S = `<thead><tr><th>健保碼</th><th>藥品名稱</th><th>規格量</th><th>支付價</th><th>劑型</th><th>備註</th></tr></thead>`;
 function queryRowHtml(d){
   return `<tr class="query"><td data-l="健保碼">${esc(d.c)}</td>
     <td data-l="藥品名稱" class="nm">${nameCell(d)}</td>
+    <td data-l="規格量">${esc(d.spec) || "-"}</td>
     <td data-l="支付價" class="num">${fmtPrice(d.price)}</td>
     <td data-l="劑型">${esc(d.form)}</td>
     <td data-l="成分">${esc(d.ing)}</td>
@@ -204,6 +207,7 @@ function subRowHtml(r, qPrice, qForm, isQuery){
   if (r.diff) note.push(`<span class="diffnote">健保價不同：${fmtPrice(d.price)}（查詢藥品 ${fmtPrice(qPrice)}）</span>`);
   return `<tr class="${isQuery ? "query" : ""}"><td data-l="健保碼">${esc(d.c)}</td>
     <td data-l="藥品名稱" class="nm">${nameCell(d)}</td>
+    <td data-l="規格量">${esc(d.spec) || "-"}</td>
     <td data-l="支付價" class="num">${fmtPrice(d.price)}</td>
     <td data-l="劑型">${esc(d.form)}</td>
     <td data-l="備註" class="note">${note.map(x => `<div>${x}</div>`).join("") || "-"}</td></tr>`;

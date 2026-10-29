@@ -29,6 +29,8 @@ REQUIRED_COLUMNS = [
     "有效起日",
     "有效迄日",
     "分類分組名稱",
+    "規格量",
+    "規格單位",
 ]
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -117,6 +119,8 @@ def process_csv(data: bytes, today_roc: int) -> list[list]:
         ingredient = (row["成分"] or "").strip()
         form = (row["劑型"] or "").strip()
         group_name = (row["分類分組名稱"] or "").strip()
+        spec_qty = (row["規格量"] or "").strip()
+        spec_unit = (row["規格單位"] or "").strip()
 
         price = parse_price(row["支付價"])
         if price is None or price <= 0:
@@ -134,7 +138,7 @@ def process_csv(data: bytes, today_roc: int) -> list[list]:
             active_today_count += 1
 
         kept_rows.append(
-            [code, name_en, name_zh, ingredient, form, group_name, price, start, end]
+            [code, name_en, name_zh, ingredient, form, group_name, price, start, end, spec_qty, spec_unit]
         )
 
     if active_today_count < MIN_ROWS:
