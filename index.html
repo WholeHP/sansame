@@ -30,11 +30,16 @@ h1{font-size:20px;margin:0;font-weight:700}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
 .panel-highlight{border-color:var(--accent);border-width:2px;box-shadow:0 2px 10px rgba(15,107,99,.12)}
 .panel-highlight h2{color:var(--accent);font-size:19px}
-@media (prefers-color-scheme:dark){.panel-highlight{box-shadow:0 2px 10px rgba(79,184,172,.18)}}
+@media (prefers-color-scheme:dark){
+  .panel-highlight{box-shadow:0 2px 10px rgba(79,184,172,.18)}
+  .search input[type=search]{background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%234fb8ac" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>')}
+}
 .search{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
-.search input[type=search]{flex:1 1 320px;font:inherit;font-size:17px;padding:10px 14px;border:1px solid var(--line);
-  border-radius:8px;background:var(--bg);color:var(--ink);min-width:0}
+.search input[type=search]{flex:1 1 320px;font:inherit;font-size:18px;padding:14px 16px 14px 44px;border:2px solid var(--accent);
+  border-radius:10px;background:var(--bg) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%230f6b63" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>') no-repeat 14px center;
+  color:var(--ink);min-width:0}
 .search input[type=search]:focus{outline:2px solid var(--accent);outline-offset:1px}
+.panel-search{padding:18px}
 .hint{color:var(--muted);font-size:13px;margin-top:8px}
 ul.results{list-style:none;margin:10px 0 0;padding:0;max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:8px}
 ul.results li{padding:8px 12px;border-bottom:1px solid var(--line);cursor:pointer}
@@ -84,7 +89,7 @@ footer{margin-top:20px;color:var(--muted);font-size:12px;line-height:1.6}
     <div class="chips" id="chips"></div>
   </header>
 
-  <section class="panel">
+  <section class="panel panel-highlight panel-search">
     <div class="search">
       <input type="search" id="q" placeholder="輸入藥品名稱（中文、英文、成分）或健保碼" autocomplete="off" autofocus>
     </div>
