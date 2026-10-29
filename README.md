@@ -3,6 +3,10 @@
 這份文件是給業主（Ron）的操作指南。整個網站只有一個網頁（`index.html`）和一份資料（`data/nhi.json`），
 放在 GitHub 上面就能免費公開給大家查詢，之後每個月會自動更新資料。
 
+> 這個 repository 已經建立並推送完成：https://github.com/WholeHP/sansame
+> （`gh` 已安裝並登入帳號 WholeHP，`.github/workflows/update.yml` 排程檔也已經在正確位置。）
+> 以下步驟留著給之後需要重新操作、或換一台電腦時參考。
+
 ## 第一次上線（七個步驟）
 
 1. **註冊 / 登入 GitHub**：到 https://github.com 用 Email 註冊一個免費帳號（如果已經有帳號就直接登入）。
@@ -27,15 +31,8 @@
 
    第一次 push 時會要求登入，照畫面指示用瀏覽器授權即可。
 
-4. **把排程檔放到正確位置**：GitHub 只會辨識 `.github/workflows/` 資料夾裡的排程檔，所以要把
-   `workflow-放到.github-workflows/update.yml` 搬到 `.github/workflows/update.yml`，再重新 commit 推送：
-
-   ```bash
-   mkdir -p .github/workflows
-   git mv "workflow-放到.github-workflows/update.yml" .github/workflows/update.yml
-   git commit -m "加入自動更新排程"
-   git push
-   ```
+4. **確認排程檔位置**：GitHub 只會辨識 `.github/workflows/` 資料夾裡的排程檔，確認
+   `.github/workflows/update.yml` 存在（這個 repository 已經是正確位置了）。
 
 5. **開啟 GitHub Pages**：在 GitHub 網頁上，進入 `sansame` 專案 → **Settings** → 左側選單 **Pages**
    → 「Build and deployment」的 **Source** 選 **GitHub Actions**。
