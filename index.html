@@ -28,6 +28,9 @@ h1{font-size:20px;margin:0;font-weight:700}
 .chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:2px 10px}
 .chip.bad{background:var(--err);color:var(--err-ink);border-color:transparent}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.panel-highlight{border-color:var(--accent);border-width:2px;box-shadow:0 2px 10px rgba(15,107,99,.12)}
+.panel-highlight h2{color:var(--accent);font-size:19px}
+@media (prefers-color-scheme:dark){.panel-highlight{box-shadow:0 2px 10px rgba(79,184,172,.18)}}
 .search{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
 .search input[type=search]{flex:1 1 320px;font:inherit;font-size:17px;padding:10px 14px;border:1px solid var(--line);
   border-radius:8px;background:var(--bg);color:var(--ink);min-width:0}
@@ -221,10 +224,10 @@ function showDetail(code){
   if (!res){ box.innerHTML = `<div class="panel">找不到健保碼 ${esc(code)}。它可能已停止給付或不在目前的健保藥品檔中。</div>`; return; }
   let html = `<div class="panel"><h2>查詢藥品</h2><div class="tablewrap"><table>${THEAD_Q}<tbody>${queryRowHtml(res.q)}</tbody></table></div></div>`;
   if (!res.matchable){
-    html += `<div class="panel"><h2>可取代的三同藥品</h2><p class="sub">這個藥品沒有分類分組名稱，無法比對三同。</p></div>`;
+    html += `<div class="panel panel-highlight"><h2>可取代的藥品</h2><p class="sub">這個藥品沒有分類分組名稱，無法比對三同。</p></div>`;
   } else {
     const nd = res.rows.filter(r => r.diff).length, nfm = res.rows.filter(r => r.fdiff).length;
-    html += `<div class="panel"><h2>可取代的三同藥品</h2>
+    html += `<div class="panel panel-highlight"><h2>可取代的藥品</h2>
       <p class="sub">同分類分組名稱、同劑型共 ${res.rows.length} 個健保碼（含查詢藥品本身）${nd ? `，${nd} 個的健保價與查詢藥品不同` : ""}${nfm ? `，${nfm} 個的劑型寫法不同（寫法不同但視為同類，例如錠劑與膜衣錠）` : ""}（均已在備註註明）。依英文名稱排序，無英文名稱者依中文名稱排序。</p>
       <div class="tablewrap"><table>${THEAD_S}<tbody>${
         res.rows.map(r => subRowHtml(r, res.q.price, res.q.form, r.d.c === cu)).join("")
