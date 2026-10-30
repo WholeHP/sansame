@@ -31,6 +31,8 @@ REQUIRED_COLUMNS = [
     "分類分組名稱",
     "規格量",
     "規格單位",
+    "ATC代碼",
+    "藥品代碼超連結",
 ]
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -121,6 +123,10 @@ def process_csv(data: bytes, today_roc: int) -> list[list]:
         group_name = (row["分類分組名稱"] or "").strip()
         spec_qty = (row["規格量"] or "").strip()
         spec_unit = (row["規格單位"] or "").strip()
+        atc = (row["ATC代碼"] or "").strip()
+        link = (row["藥品代碼超連結"] or "").strip()
+        if not link.lower().startswith("https://"):
+            link = ""
 
         price = parse_price(row["支付價"])
         if price is None or price <= 0:
@@ -138,7 +144,7 @@ def process_csv(data: bytes, today_roc: int) -> list[list]:
             active_today_count += 1
 
         kept_rows.append(
-            [code, name_en, name_zh, ingredient, form, group_name, price, start, end, spec_qty, spec_unit]
+            [code, name_en, name_zh, ingredient, form, group_name, price, start, end, spec_qty, spec_unit, atc, link]
         )
 
     if active_today_count < MIN_ROWS:

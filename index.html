@@ -55,6 +55,8 @@ table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}
 th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 th{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap;background:var(--panel);position:sticky;top:0}
 td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td a{color:var(--accent);text-decoration:none}
+td a:hover{text-decoration:underline}
 .muted{color:var(--muted);font-size:12px}
 .nm b{font-weight:600}
 .nm .en{display:block;color:var(--muted);font-size:12px}
@@ -99,7 +101,7 @@ footer{margin-top:20px;color:var(--muted);font-size:12px;line-height:1.6}
 
   <section id="detail"></section>
 
-  <p class="muted">三同的定義：分類分組名稱與劑型相同，其中錠劑、膜衣錠、糖衣錠視為同一種劑型，各種持續（緩釋）釋放錠、持續釋放膠囊的不同寫法也各視為同一種。健保價或劑型寫法不同的品項也會列出，並在備註註明。只列出目前仍有效且支付價大於 0 的健保碼。</p>
+  <p class="muted">三同的定義：分類分組名稱、ATC 代碼與劑型相同，其中錠劑、膜衣錠、糖衣錠視為同一種劑型，各種持續（緩釋）釋放錠、持續釋放膠囊的不同寫法也各視為同一種；分類分組名稱含有多種含量範圍時，另外要求成分含量相同。健保價或劑型寫法不同的品項也會列出，並在備註註明。只列出目前仍有效且支付價大於 0 的健保碼。健保碼有連結的可點擊開啟食藥署藥品許可證查詢頁。</p>
 
   <footer>資料來源：衛福部中央健保署健保藥品檔（政府資料開放）。本頁每月自動更新，資料僅供參考，不作為實際給付或調劑之依據，請以健保署公告及藥品說明書為準。</footer>
 </div>
@@ -130,6 +132,32 @@ const FORM_CLASS = {
 };
 const formClass = f => FORM_CLASS[f] || f;
 
+/* 含量範圍判斷與成分欄含量抽取（分組名稱含「數字－數字」範圍時，額外要求成分含量相同） */
+const nfkc = s => String(s || "").normalize("NFKC");
+const RANGE_RE = /\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?/;
+const hasContentRange = grp => RANGE_RE.test(nfkc(grp));
+const CONTENT_RE = /(\d+(?:\.\d+)?)\s*(MCG|MIU|GM|MG|UG|ML|IU|U|G)\b/g;
+function contentKey(ingredient){
+  const s = nfkc(ingredient).toUpperCase();
+  const tokens = [];
+  let m;
+  CONTENT_RE.lastIndex = 0;
+  while ((m = CONTENT_RE.exec(s))){
+    let val = parseFloat(m[1]); let unit = m[2];
+    if (unit === "G" || unit === "GM"){ val *= 1000; unit = "MG"; }
+    else if (unit === "MCG" || unit === "UG"){ val *= 0.001; unit = "MG"; }
+    tokens.push(`${Math.round(val * 1e6) / 1e6}${unit}`);
+  }
+  tokens.sort();
+  return tokens.join("|");
+}
+function groupKeyOf(d){
+  if (!d.grp) return "";
+  let key = d.grp + "\u0001" + formClass(d.form) + "\u0001" + (d.atc || "");
+  if (hasContentRange(d.grp)) key += "\u0001" + contentKey(d.ing);
+  return key;
+}
+
 const S = { drugs: [], byCode: new Map(), groups: new Map(), generated: "", total: 0, cur: null };
 
 function buildIndex(data){
@@ -142,10 +170,10 @@ function buildIndex(data){
     }
   }
   for (const r of pick.values()){
-    const d = { c:r[0], en:r[1], zh:r[2], ing:r[3], form:r[4], grp:r[5], price:r[6], specQty:r[9]||"", specUnit:r[10]||"" };
+    const d = { c:r[0], en:r[1], zh:r[2], ing:r[3], form:r[4], grp:r[5], price:r[6], specQty:r[9]||"", specUnit:r[10]||"", atc:r[11]||"", link:r[12]||"" };
     d.spec = d.specQty ? `${d.specQty}${d.specUnit}` : "";
     d.h = norm(`${d.c} ${d.zh} ${d.en} ${d.ing}`);
-    d.gk = d.grp ? `${d.grp}\u0001${formClass(d.form)}` : "";
+    d.gk = groupKeyOf(d);
     S.drugs.push(d); S.byCode.set(d.c, d);
     if (d.gk){ let a = S.groups.get(d.gk); if (!a) S.groups.set(d.gk, a = []); a.push(d); }
   }
@@ -199,10 +227,14 @@ function nameCell(d){
   const main = d.en || d.zh, other = d.en ? d.zh : "";
   return `<b>${esc(main)}</b>${other ? `<span class="en">${esc(other)}</span>` : ""}`;
 }
+function codeCell(d){
+  if (d.link) return `<a href="${esc(d.link)}" target="_blank" rel="noopener">${esc(d.c)}</a>`;
+  return esc(d.c);
+}
 const THEAD_Q = `<thead><tr><th>健保碼</th><th>藥品名稱</th><th>規格量</th><th>支付價</th><th>劑型</th><th>成分</th><th>分類分組名稱</th></tr></thead>`;
 const THEAD_S = `<thead><tr><th>健保碼</th><th>藥品名稱</th><th>規格量</th><th>支付價</th><th>劑型</th><th>備註</th></tr></thead>`;
 function queryRowHtml(d){
-  return `<tr class="query"><td data-l="健保碼">${esc(d.c)}</td>
+  return `<tr class="query"><td data-l="健保碼">${codeCell(d)}</td>
     <td data-l="藥品名稱" class="nm">${nameCell(d)}</td>
     <td data-l="規格量">${esc(d.spec) || "-"}</td>
     <td data-l="支付價" class="num">${fmtPrice(d.price)}</td>
@@ -216,7 +248,7 @@ function subRowHtml(r, qPrice, qForm, isQuery){
   if (isQuery) note.push('<span class="badge">查詢藥品</span>');
   if (r.fdiff) note.push(`<span class="diffnote">劑型不同：${esc(d.form)}（查詢藥品 ${esc(qForm)}）</span>`);
   if (r.diff) note.push(`<span class="diffnote">健保價不同：${fmtPrice(d.price)}（查詢藥品 ${fmtPrice(qPrice)}）</span>`);
-  return `<tr class="${isQuery ? "query" : ""}"><td data-l="健保碼">${esc(d.c)}</td>
+  return `<tr class="${isQuery ? "query" : ""}"><td data-l="健保碼">${codeCell(d)}</td>
     <td data-l="藥品名稱" class="nm">${nameCell(d)}</td>
     <td data-l="規格量">${esc(d.spec) || "-"}</td>
     <td data-l="支付價" class="num">${fmtPrice(d.price)}</td>
