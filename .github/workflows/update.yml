@@ -48,6 +48,7 @@ jobs:
 
   deploy:
     needs: update-data
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
