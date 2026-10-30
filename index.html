@@ -134,7 +134,7 @@ const formClass = f => FORM_CLASS[f] || f;
 
 /* 含量範圍判斷與成分欄含量抽取（分組名稱含「數字－數字」範圍時，額外要求成分含量相同） */
 const nfkc = s => String(s || "").normalize("NFKC");
-const RANGE_RE = /\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?/;
+const RANGE_RE = /\d+(?:\.\d+)?\s*(?:MCG|MIU|GM|MG|UG|ML|IU|U|G)?\s*-\s*\d+(?:\.\d+)?/i;
 const hasContentRange = grp => RANGE_RE.test(nfkc(grp));
 const CONTENT_RE = /(\d+(?:\.\d+)?)\s*(MCG|MIU|GM|MG|UG|ML|IU|U|G)\b/g;
 function contentKey(ingredient){

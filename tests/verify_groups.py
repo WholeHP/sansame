@@ -22,7 +22,7 @@ FORM_CLASS = {
     "緩釋膠囊": "持續釋放膠囊", "緩釋微粒膠囊": "持續釋放膠囊",
 }
 
-RANGE_RE = re.compile(r"\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?")
+RANGE_RE = re.compile(r"\d+(?:\.\d+)?\s*(?:MCG|MIU|GM|MG|UG|ML|IU|U|G)?\s*-\s*\d+(?:\.\d+)?", re.IGNORECASE)
 CONTENT_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(MCG|MIU|GM|MG|UG|ML|IU|U|G)\b")
 
 
@@ -137,6 +137,15 @@ def main():
         check("Dipachro(AB46524100) 存在於 Depakine Chrono 同組清單", dipachro is not None)
     else:
         check("Depakine Chrono(BC22008100) 今天有效（找不到，需人工確認）", False)
+
+    janumet, members = group_for_code("BC25043100")
+    if janumet is not None:
+        check("Janumet 50/500mg(BC25043100) 同組不含 50/850mg 的 AC61934100",
+              not any(m[0] == "AC61934100" for m in members))
+        check("Janumet 50/500mg(BC25043100) 同組含同劑量的 Comtoff 50/500mg(AC61935100)",
+              any(m[0] == "AC61935100" for m in members))
+    else:
+        check("Janumet 50/500mg(BC25043100) 今天有效（找不到，需人工確認）", False)
 
     lixiana, members = group_for_code("BC26600100")
     if lixiana is not None:
